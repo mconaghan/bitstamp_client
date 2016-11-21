@@ -232,5 +232,26 @@ class BitStampHttpClient():
 
   def place_buy_limit_order(self, amount=None, price=None, limit_price=None):
 
-    self.logger.info("Not implemented place_buy_limit_order_yet, received request to buy %.8f bitcoin at a price of %.8f, then sell at a price of %.8f" % (amount, price, limit_price))
-    return
+    self.logger.info("Received request to buy %.8f bitcoin at a price of %.8f, then sell at a price of %.8f" % (amount, price, limit_price))
+
+    parameters = self.get_api_connection_details()
+
+    # Bitstamp mandates no more than 8 dps, in future may want to explicitly control the rounding - c.f. limit_price below
+    parameters["amount"]      = "%.8f" % (amount) 
+    parameters["price"]       = str(price)
+
+    # Again Bitstamp asks for no more than 2dps, in t his case we always want it to round up, hacky way  of doing that  is to add 0.005, for example:
+    # 700.123 -> we want 700.13 instead of 700.12, 700.123 + 0.005 = 700.128 -> 700.13
+    # something like 700.987, which we want to round to 700.99, will still work: 700.987 + 0.005 = 700.992 -> 700.99
+    parameters["limit_price"] = "%.2f" % (limit_price + 0.005)
+
+    self.logger.info("Limit price after rounding is %s" % (parameters["limit_price"]))
+
+    self.logger.debug("Parameters for buy limit order request are %s" % (parameters))
+
+    response   = self.do_http_post(URL_BUY_LIMIT_ORDER, parameters)
+
+    if not response:
+      self.logger.info("No response from bistamp on buy limit order request")
+    else:
+      self.logger.info("Have a response from buy limit order request: %s" % (response))
