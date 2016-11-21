@@ -18,9 +18,11 @@ import hmac, hashlib
 URL_BTC_USD_PX      = "https://www.bitstamp.net/api/v2/ticker/btcusd/"
 URL_BALANCE         = "https://www.bitstamp.net/api/v2/balance/"
 URL_BITCOIN_ADDRESS = "https://www.bitstamp.net/api/bitcoin_deposit_address/"
+URL_OPEN_ORDERS     = "https://www.bitstamp.net/api/v2/open_orders/btcusd/"
+URL_BUY_LIMIT_ORDER = "https://www.bitstamp.net/api/v2/buy/btcusd/"
 
 # Do we really call each of these URLs? True means we dummy, as in we do NOT call the real URL (used for testing)
-DUMMY_PRIVATE_API_CALLS = {URL_BALANCE : True}
+DUMMY_PRIVATE_API_CALLS = {URL_BALANCE : False}
 
 # Known error responses
 ERROR_RESPONSES = {"API key not found" : "Check the API key, its probably wrong, hasn't ben actived etc. You can check at https://www.bitstamp.net/account/security/api/",
@@ -31,7 +33,7 @@ ERROR_RETRY_LIMIT     = 10
 
 class BitStampHttpClient():
 
-  def __init__(self, app_name, client_id, public_key):
+  def __init__(self, app_name, client_id, public_key, logger_level=logging.INFO):
 
     self.app_name    = app_name
     self.client_id   = client_id
@@ -40,9 +42,18 @@ class BitStampHttpClient():
     self.btc_usd_fee = None
     self.logger      = None
 
-    self.init_logger()
+    self.init_logger(logger_level)
 
-  def init_logger(self, level = logging.INFO):
+  def dummy_api_call(self, function):
+    """ Allows an API call to be 'dummied' for testing. """
+  
+    if "balance" == function:
+      DUMMY_PRIVATE_API_CALLS[URL_BALANCE] = True
+
+    else:
+      self.logger.error("Did not recognise the function passsed to dummy_api_call(): %s" % (function))
+
+  def init_logger(self, level):
 
     log_file = os.path.join("log", "%s.log" % (self.app_name))
 
@@ -85,6 +96,10 @@ class BitStampHttpClient():
 
     if response.status_code != 200:
       self.logger.error("Did not get 200 response back from request to %s with params of %s, response text was '%s'" % (url, parameters, response.text))
+
+      if response.json()["reason"] == "API key not found":
+        self.logger.info("The supplied API key appears to be wrong")
+
       return None
     else:
       json_payload = response.json()
@@ -110,8 +125,8 @@ class BitStampHttpClient():
   def get_api_connection_details(self):
   
     if not os.path.isfile(".bs.key"):
-       self.logger.error("No key file found, create bs.key with private key")
-       print "You need to create a file called 'bs.key' in the same directory as this script as put your private BitStamp API key in it"
+       self.logger.error("No key file found, create .bs.key with private key")
+       print "No key file found. You need to create a file called '.bs.key' in the same directory as this script as put your private BitStamp API key in it"
        sys.exit(1)
 
     key_file = open(".bs.key", "r")
@@ -133,21 +148,24 @@ class BitStampHttpClient():
   def get_btc_usd_price(self):
    
     data = self.do_http_get(URL_BTC_USD_PX)
-    return [datetime.utcnow(), data['bid'], data['ask']]
+    return {"time" : datetime.utcnow(), "bid" : data['bid'], "ask" : data['ask'], "vwap" : data['vwap']}
 
   def get_fees(self, json):
 
     if self.btc_usd_fee == None:
 
-      self.btc_usd_fee = float(json["btcusd_fee"])
+      self.btc_usd_fee = float(json["btcusd_fee"]) / 100.0
    
-      self.logger.info("The fee for trading BTC and USD is %f" % (self.btc_usd_fee))
+      self.logger.info("The fee for trading BTC and USD is %f" % (self.btc_usd_fee * 100.0))
 
   def get_balance(self, currency = "usd"):
 
     if DUMMY_PRIVATE_API_CALLS[URL_BALANCE]:
-      self.logger.info("Returning dummy balanace of 100")
+      self.logger.info("Returning dummy balance of 100 and setting fee to 0.25")
+
+      self.get_fees({"btcusd_fee" : "0.25"})
       return 100
+
     else:
     
       parameters = self.get_api_connection_details()
@@ -164,7 +182,7 @@ class BitStampHttpClient():
         float_value = float(value)
         self.logger.info("Converted to a float: %f" % (float_value))
 
-        get_fees(response)
+        self.get_fees(response)
 
         return float_value
 
@@ -177,3 +195,15 @@ class BitStampHttpClient():
       return
     else:
       self.logger.info("Extracted bitcoin address as as %s" % (response))
+
+  def get_open_orders(self, only_buys=False):
+
+    self.logger.info("Not implemented get_open_orders yet, returning no orders")
+
+    #TODO
+    return []
+
+  def place_buy_limit_order(self, amount=None, price=None, limit_price=None):
+
+    self.logger.info("Not implemented place_buy_limit_order_yet, received request to buy %.8f bitcoin at a price of %.8f, then sell at a price of %.8f" % (amount, price, limit_price))
+    return
