@@ -24,7 +24,7 @@ while True:
   data = bitstamp_client.get_btc_usd_price()
 
   try:
-    csv_writer.writerow([data['time'], data['bid'], data['ask'], data['vwap'])
+    csv_writer.writerow([data['time'], data['bid'], data['ask'], data['vwap']])
     csv_file.flush()
 
   except:
