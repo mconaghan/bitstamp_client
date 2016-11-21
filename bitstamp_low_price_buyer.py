@@ -11,6 +11,7 @@ import sys, time, logging, datetime
 
 from bitstamp_http_client import BitStampHttpClient
 from secret_stuff import MY_BITSTAMP_ID, MY_PUBLIC_BITSTAMP_KEY
+from email_sender import EmailSender
 
 SLEEP_TIME_SECS = 5 # Note that we can't hit Bitsamp more than once per second (600 per 10 mins) or they will block the IP.
 
@@ -36,6 +37,7 @@ EXAMPLE
 """ % (APP_NAME, APP_NAME)
 
 bitstamp_client = BitStampHttpClient(APP_NAME, MY_BITSTAMP_ID, MY_PUBLIC_BITSTAMP_KEY, logger_level=logging.DEBUG) 
+email_sender    = EmailSender()
 
 # TODO change this back
 # Foor now, pretend that balance is 100
@@ -53,6 +55,9 @@ price_delta                   = None # how different should the current price di
 # Defaulted
 seconds_between_orders        = 60   # wait X seconds between one order being filled and placing another order
 profit_percentage             = 0.01 
+
+# TODO make this configurable
+email_alerts_to               = "mconaghan@gmail.com"
 
 for argument in sys.argv[1:]:
 
@@ -167,7 +172,12 @@ while len(orders_to_date) < max_number_of_orders_to_place:
       logger.debug("Caulculated limit price as %f: %f x (1 + (%f *2) + %f)" % (limit_price, ask, bitstamp_client.btc_usd_fee, profit_percentage))
       logger.debug("Caulculated limit price as %f: %f x %f" % (limit_price, ask, multiplier))
 
-      logger.info("Going to place order for %f bitcoin at a price of %f, selling again at %f" % (amount, price, limit_price))
+      log_string = "Going to place order for %f bitcoin at a price of %f, selling again at %f" % (amount, price, limit_price) 
+      logger.info(log_string)
+      print log_string
+
+      if email_alerts_to:
+        email_sender.send_email("Placed buy order for bitcoins on Bitstamp", email_alerts_to, log_string)
 
       orders_to_date.append({"qty_usd" : per_order_quantity, "qty_btc" : amount, "price_buy" : price, "price_sell" : limit_price, "time" : now})
 
@@ -186,3 +196,4 @@ while len(orders_to_date) < max_number_of_orders_to_place:
     last_number_orders = len(orders_to_date)
   else:
     counter = counter + 1
+
