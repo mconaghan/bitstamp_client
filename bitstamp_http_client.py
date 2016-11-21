@@ -31,6 +31,10 @@ ERROR_RESPONSES = {"API key not found" : "Check the API key, its probably wrong,
 ERROR_SLEEP_TIME_SECS = 10
 ERROR_RETRY_LIMIT     = 10
 
+# Magic numbers
+BUY  = 0
+SELL = 1
+
 class BitStampHttpClient():
 
   def __init__(self, app_name, client_id, public_key, logger_level=logging.INFO):
@@ -196,12 +200,35 @@ class BitStampHttpClient():
     else:
       self.logger.info("Extracted bitcoin address as as %s" % (response))
 
-  def get_open_orders(self, only_buys=False):
+  def get_open_orders(self, include_buys=True, include_sells=True):
 
-    self.logger.info("Not implemented get_open_orders yet, returning no orders")
+    self.logger.info("Calling Bitstamp open orders function")
 
-    #TODO
-    return []
+    parameters = self.get_api_connection_details()
+    response   = self.do_http_post(URL_OPEN_ORDERS, parameters)
+
+    if not response:
+      self.logger.info("No response from bistamp on open orders request - probably means no orders")
+      return []
+    else:
+
+      self.logger.info("Have a response from open orders request %s" % (response))
+
+      if len(response) == 0:
+        self.logger.info("No open orders")
+        return []
+      else:
+        orders_to_return = []
+
+        for order in response:
+          if (order["type"] == BUY) and (include_buys):
+            orders_to_return.append(order)
+          elif (order["type"] == SELL) or (include_sells):
+            orders_to_return.append(order)
+
+        self.logger.info("After filtering on side, returning %d orders - %s" % (len(orders_to_return), orders_to_return))
+
+        return orders_to_return 
 
   def place_buy_limit_order(self, amount=None, price=None, limit_price=None):
 

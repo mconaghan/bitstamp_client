@@ -131,7 +131,7 @@ while len(orders_to_date) < max_number_of_orders_to_place:
   if outstanding_order:
     logger.info("There are outstanding orders, going to check the status of them")
 
-    open_orders = bitstamp_client.get_open_orders(only_buys=True)
+    open_orders = bitstamp_client.get_open_orders(include_buys=True, include_sells=False) # don't include the sell orders, only the buys
 
     if len(open_orders) > 0:
       logger.info("Orders are still open, going to sleep")
