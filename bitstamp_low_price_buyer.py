@@ -29,10 +29,11 @@ MANDATORY
 OPTIONAL
   --secs-between-orders   - How long (in seconds) to wait between one order being filled and placing the next order. Default 60s."
   --profit-percentage     - How much profit to wait for per order. Default 1%% + fees (currently fees are 0.25%% per trade, total 0.5%%)
+  --email-alerts-to       - An email address to send alertrs when an order is placed.
 
 EXAMPLE
 
-%s --amount-to-trade=100 --max-orders=10 --order-qty=10 --price-delta=0.01
+%s --amount-to-trade=100 --max-orders=10 --order-qty=10 --price-delta=0.01 --email-alerts-to=mconaghan@gmail.com
 
 """ % (APP_NAME, APP_NAME)
 
@@ -56,8 +57,7 @@ price_delta                   = None # how different should the current price di
 seconds_between_orders        = 60   # wait X seconds between one order being filled and placing another order
 profit_percentage             = 0.01 
 
-# TODO make this configurable
-email_alerts_to               = "mconaghan@gmail.com"
+email_alerts_to               = None
 
 for argument in sys.argv[1:]:
 
@@ -73,6 +73,8 @@ for argument in sys.argv[1:]:
     seconds_between_orders = int(argument[22:])
   elif argument.startswith("--profit-percentage="):
     profit_percentage = float(argument[20:])
+  elif argument.startswith("--email-alerts-to="):
+    email_alerts_to = argument[18:]
   else:
     print "ERROR - unrecognised option '%s'" % (argument)
     print USAGE
@@ -106,6 +108,9 @@ print "Price Delta        %.2f%% (The current ask price must be this much less t
 
 print "Waiting %d seconds between orders" % (seconds_between_orders)
 print "Waiting for a %f%% (+ fees) profit before selling" % (profit_percentage)
+
+if email_alerts_to:
+  print "Sending email alerts to %s" % (email_alerts_to)
 
 check_max_amount = per_order_quantity * max_number_of_orders_to_place
 
@@ -178,6 +183,7 @@ while len(orders_to_date) < max_number_of_orders_to_place:
 
       if email_alerts_to:
         email_sender.send_email("Placed buy order for bitcoins on Bitstamp", email_alerts_to, log_string)
+        logger.info("Sent email alert")
 
       orders_to_date.append({"qty_usd" : per_order_quantity, "qty_btc" : amount, "price_buy" : price, "price_sell" : limit_price, "time" : now})
 
