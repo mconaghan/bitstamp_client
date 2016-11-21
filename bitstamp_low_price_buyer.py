@@ -124,7 +124,7 @@ orders_to_date     = []
 counter            = 0
 last_number_orders = 0
 
-while orders_to_date < max_number_of_orders_to_place:
+while len(orders_to_date) < max_number_of_orders_to_place:
 
   now = datetime.datetime.utcnow()
 
