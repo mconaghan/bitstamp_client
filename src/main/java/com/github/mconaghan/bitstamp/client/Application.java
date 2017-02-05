@@ -1,4 +1,4 @@
-package com.github.mconaghan.bitstamp.client.server;
+package com.github.mconaghan.bitstamp.client;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
